@@ -1,0 +1,347 @@
+- Assume your dataframe is named df and the columns are "col1" and "col2".You can get the value of "col1" where "col2" is maximum like this:
+
+df.loc[df['col2'].idxmax(), 'col1']
+
+
+
+
+Plot the graph of Y as a function of X.
+As X is a continuous variable we group by quantiles. We plot the Y of each group as a function of the mean moneyness in the group.
+
+python
+df5['X_q'] = pd.qcut(df5['X'], q=10)
+df5['X_q'] = df5['X_q'].apply(lambda interval: (interval.left + interval.right) / 2)
+
+#or 
+
+df['X_cut'] = pd.cut(df.X, bins=3, labels=['old', 'medium', 'new'])
+
+
+
+
+
+to display the whole columns not truncated
+
+pd.set_option('display.max_colwidth', None)
+
+
+
+
+
+Use regex to extract the first number (with possible commas)
+
+df['hh_income_lb'] = df['hh_income'].str.extract(r'([\d,]+)')[0]          # grab first number
+df['hh_income_lb'] = df['hh_income_lb'].str.replace(',', '', regex=True)  # remove commas
+df['hh_income_lb'] = df['hh_income_lb'].astype(float)
+
+
+
+
+
+s = "(1.086, 1.853]"
+
+first_num = float(s.split(',')[0][1:]) # Remove '(' and convert to float
+
+print(first_num) # Output: 1.086
+
+If you want to extract the first float from any string, regardless of how the string looks (it may have brackets, spaces, other text, etc.), regex is the most robust way.
+
+import re
+
+s = "(1.086, 1.853]"
+match = re.search(r'[-+]?\d*\.\d+|\d+', s)
+if match:
+    first_float = float(match.group())
+    print(first_float)
+else:
+    print("No float found.")
+
+
+
+
+
+plot nan heatmap
+
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+
+plt.figure(figsize=(10, 6))
+sns.heatmap(df.isnull(), cbar=False, cmap='gray')  # White is non-NaN, black is NaN
+plt.show()
+
+
+
+
+
+
+for duplicated values including first occurrence
+python
+all_dupes = early_df[early_df['session_id'].duplicated(keep=False)]
+print(all_dupes)
+
+#and to see the list of duplicated values
+
+dupe_values = df['colname'][df['colname'].duplicated(keep=False)].unique()
+print(dupe_values)
+
+
+#keep only the first occurrence 
+
+df_new = df.drop_duplicates(subset='colname', keep='first')
+
+
+#Selecting All Instances of Duplicated Rows (including the first occurrence)
+
+df[df.duplicated(keep=False)]
+
+
+#Find Duplicates Based on Specific Columns
+df.duplicated(subset=['col1', 'col2'])
+# Or select the duplicated rows:
+df[df.duplicated(subset=['col1', 'col2'], keep=False)]
+
+
+drop duplicated rows except the first occurrence 
+df = df.drop_duplicates(keep='first')
+
+#If you want to reset the index afterwards:
+df = df.drop_duplicates().reset_index(drop=True)v
+
+#If you want to drop duplicates only based on certain columns, e.g. 'A' and 'B':
+df = df.drop_duplicates(subset=['A', 'B'], keep='first')
+
+
+
+
+
+
+
+
+another regex usage
+python
+
+import pandas as pd
+
+# Example data
+early_df_unique = pd.DataFrame({
+    'hh_income': ['50,000-79,999 USD', '$200,000+', '100,000-149,999 USD', '$60000-79999', 'N/A']
+})
+
+# Function to extract lower bound as float
+def extract_lb(s):
+    import re
+    # Remove $ and commas
+    s = s.replace('$', '').replace(',', '')
+    # Find a sequence of digits at the start
+    match = re.match(r'(\d+)', s)
+    if match:
+        return float(match.group(1))
+    else:
+        return None  # Could be NaN as well
+
+# Apply to DataFrame
+early_df_unique['hh_income_lb'] = early_df_unique['hh_income'].apply(extract_lb)
+
+print(early_df_unique)
+
+
+
+
+
+
+
+to drop rows where a specific columns is nan
+
+df = df.dropna(subset=['col'])
+
+
+
+
+
+
+to plot distrib of all columns of X
+
+import matplotlib.pyplot as plt
+
+for col in X.columns:
+    plt.figure()
+    if X[col].dtype == 'object' or X[col].dtype.name == 'category':
+        # Categorical bar plot
+        X[col].value_counts().plot(kind='bar')
+        plt.ylabel('Count')
+    else:
+        # Numeric histogram
+        X[col].hist(bins=30)
+        plt.ylabel('Frequency')
+    plt.title(f'Distribution of {col}')
+    plt.xlabel(col)
+    plt.show()
+
+
+
+
+
+It matches numbers (optionally signed, possibly decimal) inside the string.
+
+re.findall(r"[-+]?(?:\d*\.*\d+)", """6'11"*-2.12568866m""")
+
+
+
+def get_meter_value(x):
+    if isinstance(x, str):
+        m = re.findall(r"[-+]?(?:\d*\.*\d+)", x)
+        if len(m) == 1:
+            x = m[0]
+        elif len(m) == 2:
+            x = m[1]
+        else:
+            x = m[2]
+        return x
+
+
+for cols in ['Draft', 'Upwind sail area', 'Downwind sail area', 'Mainsail area', 'Maximum headroom']:
+    df[cols] = df[cols].apply(get_meter_value)
+
+
+
+
+
+
+
+plot heatmap correl of df
+
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(8, 6))  # Optional: adjust size
+plt.matshow(corr, fignum=1, cmap='coolwarm')  # You can change `cmap` as desired
+plt.colorbar()  # Add a color bar
+
+plt.xticks(range(len(corr.columns)), corr.columns, rotation=90)
+plt.yticks(range(len(corr.columns)), corr.columns)
+
+plt.show()
+
+
+
+
+
+
+
+boxplot to compare two groups (two df)
+
+import matplotlib.pyplot as plt
+
+# Your two DataFrames
+# df_expensive_boat
+# df_cheap_boat
+boxplot_cols = ['Year', 'Hull length', 'Beam (width)', 'Draft', 'Upwind sail area']
+
+fig, axes = plt.subplots(1, len(boxplot_cols), figsize=(15, 4), sharey=False)
+
+for i, col in enumerate(boxplot_cols):
+    # Collect data from both groups for this column
+    group_data = [
+        df_cheap_boat[col].dropna(),      # "Cheap boat"
+        df_expensive_boat[col].dropna()   # "Expensive boat"
+    ]
+
+    # Plot boxplot for this column
+    bp = axes[i].boxplot(group_data, patch_artist=True, widths=0.6)
+
+    # Set colors (optional)
+    colors = ['#1f77b4', 'green']  # cheap boat: blue, expensive boat: green
+    for patch, color in zip(bp['boxes'], colors):
+        patch.set_facecolor(color)
+
+    # Set x-tick labels
+    axes[i].set_xticks([1, 2])
+    axes[i].set_xticklabels(['Cheap boat', 'Expensive boat'])
+    axes[i].set_title(col)
+
+plt.tight_layout()
+plt.show()
+
+
+OR 
+
+
+fig, ax = plt.subplots()
+sns.boxplot(data=df5, x="Geographic Region", y="Listing Price (USD)", ax=ax)
+fig.show()
+
+
+
+
+
+
+
+
+
+
+
+to create many sub boxplots to test consistency of an effect ( example : see if the price trend across region is consistent across 'Make')
+
+display(boat_data['Make'].value_counts())
+common_makes = boat_data['Make'].value_counts().index[:5]
+fig, ax = plt.subplots(figsize=(10, 5))
+sns.boxplot(data=boat_data.loc[boat_data["Make"].isin(common_makes)], x="Make", y="Listing Price (USD)", hue="Geographic Region", hue_order=["Caribbean", "Europe", "USA"], ax=ax)
+ax.get_yaxis().set_major_formatter(thousands_formatter)
+fig.show()
+
+
+
+
+
+
+
+to plot autocorrelation by lag
+
+import matplotlib.pyplot as plt
+
+max_lag = 30
+autocorrs = [df['value'].autocorr(lag=i) for i in range(1, max_lag+1)]
+
+plt.figure(figsize=(10,5))
+plt.bar(range(1, max_lag+1), autocorrs)
+plt.xlabel('Lag')
+plt.ylabel('Autocorrelation')
+plt.title('Autocorrelation by Lag')
+plt.show()
+
+
+
+
+
+
+
+
+
+create a dummy regressor for benchmark
+
+from sklearn.dummy import DummyRegressor
+
+# y_train are your training CPR values
+mean_predictor = DummyRegressor(strategy='mean')
+mean_predictor.fit(X_train, y_train)
+
+# For every test observation, it predicts the training mean
+y_pred = mean_predictor.predict(X_test)
+
+
+
+
+
+
+
+To open a csv mixed in a txt file
+
+python
+# Load the data 
+base_path = '/XXX/datasets/online_shopping_mall/'
+demographics_file_location = base_path + 'data_demo.txt'
+events_file_location = base_path + 'data_events.txt'
+demographic_df = pd.read_csv(demographics_file_location, sep='\t',index_col="panelist_id")
+events_df = pd.read_csv(events_file_location, sep='\t', engine="python", on_bad_lines='skip')
