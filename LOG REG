@@ -1,11 +1,3 @@
-similarly to my post about a clean OLS, i would like to get your povs about this template i have now and that i plan to use as baseline for log reg
-
-I am not sure of some checks i should do (while its way more clear for classic linear regression)
-
-also not sure if the imbalanced data are correctly treated ....
-
-I really want something that works msot of times in an okayish manner rather than the top notch log reg in a specific context 
-
 # =========================
 # 2) Encode categoricals (keep dummy names), cast dummies to int
 # =========================
@@ -68,6 +60,8 @@ X_test_final  = X_test_t[num_cols + oh_cols + ord_cols]
 
 
 
+
+
 # -------------------------------
 # 1) Check class balance
 # -------------------------------
@@ -92,6 +86,8 @@ plt.show()
 
 
 
+
+
 # 2) Baseline statsmodels Logit (unweighted)
 # -------------------------------
 X_train_sm = sm.add_constant(X_train_final)
@@ -107,6 +103,11 @@ print("\nTest accuracy:", accuracy_score(y_test, y_pred_basic))
 print("Test ROC AUC :", roc_auc_score(y_test, y_prob_basic))
 print("Test PR  AUC :", average_precision_score(y_test, y_prob_basic))
 print("\nClassification report:\n", classification_report(y_test, y_pred_basic, digits=3))
+
+
+
+
+
 
 
 from sklearn.metrics import f1_score
@@ -143,7 +144,9 @@ print("Test F1      :", f1_test)
 print("\nΔF1 (train - test):", f1_train - f1_test)
 
 
-CHECK HYPOTHESIS
+
+CHECK HYPOTHESIS_____________________________________________
+
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -180,7 +183,7 @@ plt.tight_layout()
 plt.show()
 
 
-
+__________________________________________________________
 
 # 3) DEAL WITH IMBALANCE
 #    B) scikit-learn: class_weight='balanced'
@@ -191,6 +194,10 @@ lr_bal = LogisticRegression(
 lr_bal.fit(X_train_final, y_train)
 y_prob_lr = lr_bal.predict_proba(X_test_final)[:, 1]
 y_pred_lr = (y_prob_lr >= 0.5).astype(int)
+
+
+
+
 
 
 from sklearn.metrics import accuracy_score, roc_auc_score, average_precision_score, f1_score, classification_report
@@ -224,6 +231,9 @@ print("\nClassification report (Test):\n", classification_report(y_test, y_pred_
 print("\nΔF1 (train - test):", f1_score(y_train, y_pred_lr_train) - f1_score(y_test, y_pred_lr))
 
 
+
+
+
 # 4) Plots: ROC & PR curves (Matplotlib only)
 def plot_roc(y_true, scores, label, color):
     fpr, tpr, _ = roc_curve(y_true, scores)
@@ -237,7 +247,6 @@ def plot_pr(y_true, scores, label, color):
 
 plt.figure(figsize=(6,5))
 plot_roc(y_test, y_prob_basic, "Logit (unweighted)", "steelblue")
-plot_roc(y_test, y_prob_w,     "GLM weighted",      "orange")
 plot_roc(y_test, y_prob_lr,    "LR balanced",       "green")
 plt.plot([0,1],[0,1],'k--', linewidth=1)
 plt.xlabel("False Positive Rate"); plt.ylabel("True Positive Rate")
@@ -246,11 +255,15 @@ plt.legend(); plt.tight_layout(); plt.show()
 
 plt.figure(figsize=(6,5))
 plot_pr(y_test, y_prob_basic, "Logit (unweighted)", "steelblue")
-plot_pr(y_test, y_prob_w,     "GLM weighted",      "orange")
 plot_pr(y_test, y_prob_lr,    "LR balanced",       "green")
 plt.xlabel("Recall"); plt.ylabel("Precision")
 plt.title("Precision–Recall Curves")
 plt.legend(); plt.tight_layout(); plt.show()
+
+
+
+
+
 
 from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve, average_precision_score
 import matplotlib.pyplot as plt
@@ -313,12 +326,11 @@ unweighted_models = [
     ("Logit (unweighted)", y_prob_basic),
 ]
 weighted_models = [
-    ("GLM weighted", y_prob_w),
     ("LR balanced", y_prob_lr)
 ]
 
 colors_unweighted = ["steelblue"]
-colors_weighted = ["orange", "green"]
+colors_weighted = ["orange"]
 
 # ROC for unweighted
 plot_roc_with_top3(y_test, unweighted_models, colors_unweighted, 
@@ -333,6 +345,13 @@ plot_roc_with_top3(y_test, weighted_models, colors_weighted,
 # PR for weighted
 plot_pr_curves(y_test, weighted_models, colors_weighted, 
                "Precision–Recall — Weighted Logistic Models")
+
+
+
+
+
+
+
 
 
 # 5) Auto-generated coefficient interpretation (statsmodels baseline)
@@ -350,6 +369,13 @@ summary_df = pd.DataFrame({
 
 print("\n=== Coefficient table (baseline logit) ===")
 print(summary_df)
+
+
+
+
+
+
+
 
 
 
@@ -374,6 +400,16 @@ else:
     for name, row in sig_terms.iterrows():
         print(effect_sentence(name, row['coef'], row['odds_ratio']))
 
+
+
+
+
+
+
+
+
+
+
 # ===== L1-regularized Logistic Regression with GridSearchCV (CV on F1) =====
 import numpy as np
 import pandas as pd
@@ -391,7 +427,7 @@ kf = KFold(n_splits=5, shuffle=True, random_state=42)
 
 param_grid = {
     "C": np.logspace(-3, 3, 25),              # inverse of regularization strength
-    "class_weight": ["balanced"],       # try with/without reweighting
+    "class_weight": [None, "balanced"],       # try with/without reweighting
     "solver": ["liblinear"],                  # liblinear supports L1 well
     "penalty": ["l1"],
     "max_iter": [5000]
@@ -455,50 +491,7 @@ print(nonzero.head(20))
 
 # ----- 6) Optional plots: ROC and Precision–Recall (Matplotlib only) -----
 def plot_roc(y_true, y_score, title):
-    fpr, tpr, from sklearn.metrics import roc_curve, roc_auc_score
-import matplotlib.pyplot as plt
-import numpy as np
-
-def plot_roc_with_threshold(y_true, y_score, title="ROC Curve with Optimal Threshold"):
-    # Compute ROC
-    fpr, tpr, thresholds = roc_curve(y_true, y_score)
-    auc = roc_auc_score(y_true, y_score)
-    
-    # Compute Youden’s J statistic to find optimal threshold
-    J = tpr - fpr
-    best_idx = np.argmax(J)
-    best_thr = thresholds[best_idx]
-    
-    # ---- Plot ROC curve ----
-    plt.figure(figsize=(7,6))
-    plt.plot(fpr, tpr, label=f"ROC Curve (AUC = {auc:.3f})", color="navy", lw=2)
-    plt.plot([0,1],[0,1],'k--', lw=1)
-    plt.xlabel("False Positive Rate (1 - Specificity)")
-    plt.ylabel("True Positive Rate (Sensitivity / Recall)")
-    plt.title(title)
-    
-    # ---- Mark optimal threshold ----
-    plt.scatter(fpr[best_idx], tpr[best_idx], color="red", s=80, zorder=5, label=f"Best threshold = {best_thr:.3f}")
-    plt.text(fpr[best_idx]+0.02, tpr[best_idx]-0.05,
-             f"thr={best_thr:.2f}\nTPR={tpr[best_idx]:.2f}\nFPR={fpr[best_idx]:.2f}",
-             fontsize=9, color="red", bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="red", lw=0.7))
-    
-    # ---- Optionally annotate a few other thresholds ----
-    for thr_val in [0.9, 0.7, 0.5, 0.3, 0.1]:
-        # find closest threshold index
-        idx = np.argmin(np.abs(thresholds - thr_val))
-        plt.scatter(fpr[idx], tpr[idx], color="gray", s=25, alpha=0.7)
-        plt.text(fpr[idx]+0.015, tpr[idx]-0.03, f"{thr_val:.1f}", color="gray", fontsize=8)
-    
-    plt.legend(loc="lower right")
-    plt.grid(alpha=0.3)
-    plt.tight_layout()
-    plt.show()
-    
-    print(f"Best threshold by Youden’s J = {best_thr:.4f}")
-    print(f"At this threshold → TPR: {tpr[best_idx]:.3f}, FPR: {fpr[best_idx]:.3f}")
-    return best_thr
- = roc_curve(y_true, y_score)
+    fpr, tpr, _ = roc_curve(y_true, y_score)
     auc = roc_auc_score(y_true, y_score)
     plt.figure(figsize=(6,5))
     plt.plot(fpr, tpr, label=f'AUC = {auc:.3f}')
@@ -516,6 +509,11 @@ def plot_pr(y_true, y_score, title):
 
 plot_roc(y_test, y_prob_test, "ROC — L1 Logistic (GridSearch best)")
 plot_pr(y_test, y_prob_test, "Precision–Recall — L1 Logistic (GridSearch best)")
+
+
+
+
+
 
 
 
@@ -567,6 +565,17 @@ def plot_roc_top3_thresholds(y_true, y_score, title="ROC Curve with Top 3 Thresh
     return thresholds[top3_idx], J[top3_idx]
 
 
+
+
 top3_thr, top3_J = plot_roc_top3_thresholds(y_test, y_prob_test, "ROC — L1 Logistic (GridSearch best)")
+
+
+
+
+
+
+
+
+
 
 
