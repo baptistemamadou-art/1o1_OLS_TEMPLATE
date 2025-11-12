@@ -2,7 +2,7 @@
 
 df.loc[df['col2'].idxmax(), 'col1']
 
-
+___________________________________________________________________________________________________
 
 
 Plot the graph of Y as a function of X.
@@ -17,7 +17,7 @@ df5['X_q'] = df5['X_q'].apply(lambda interval: (interval.left + interval.right) 
 df['X_cut'] = pd.cut(df.X, bins=3, labels=['old', 'medium', 'new'])
 
 
-
+___________________________________________________________________________________________________
 
 
 to display the whole columns not truncated
@@ -25,7 +25,7 @@ to display the whole columns not truncated
 pd.set_option('display.max_colwidth', None)
 
 
-
+___________________________________________________________________________________________________
 
 
 Use regex to extract the first number (with possible commas)
@@ -35,7 +35,7 @@ df['hh_income_lb'] = df['hh_income_lb'].str.replace(',', '', regex=True)  # remo
 df['hh_income_lb'] = df['hh_income_lb'].astype(float)
 
 
-
+___________________________________________________________________________________________________
 
 
 s = "(1.086, 1.853]"
@@ -57,7 +57,7 @@ else:
     print("No float found.")
 
 
-
+___________________________________________________________________________________________________
 
 
 plot nan heatmap
@@ -73,7 +73,7 @@ sns.heatmap(df.isnull(), cbar=False, cmap='gray')  # White is non-NaN, black is 
 plt.show()
 
 
-
+___________________________________________________________________________________________________
 
 
 
@@ -115,7 +115,7 @@ df = df.drop_duplicates(subset=['A', 'B'], keep='first')
 
 
 
-
+___________________________________________________________________________________________________
 
 
 
@@ -149,7 +149,7 @@ print(early_df_unique)
 
 
 
-
+___________________________________________________________________________________________________
 
 
 
@@ -158,7 +158,7 @@ to drop rows where a specific columns is nan
 df = df.dropna(subset=['col'])
 
 
-
+___________________________________________________________________________________________________
 
 
 
@@ -181,14 +181,14 @@ for col in X.columns:
     plt.show()
 
 
-
+___________________________________________________________________________________________________
 
 
 It matches numbers (optionally signed, possibly decimal) inside the string.
 
 re.findall(r"[-+]?(?:\d*\.*\d+)", """6'11"*-2.12568866m""")
 
-
+___________________________________________________________________________________________________
 
 def get_meter_value(x):
     if isinstance(x, str):
@@ -207,7 +207,7 @@ for cols in ['Draft', 'Upwind sail area', 'Downwind sail area', 'Mainsail area',
 
 
 
-
+___________________________________________________________________________________________________
 
 
 
@@ -226,7 +226,7 @@ plt.show()
 
 
 
-
+___________________________________________________________________________________________________
 
 
 
@@ -276,7 +276,7 @@ fig.show()
 
 
 
-
+___________________________________________________________________________________________________
 
 
 
@@ -293,7 +293,7 @@ fig.show()
 
 
 
-
+___________________________________________________________________________________________________
 
 
 
@@ -314,7 +314,7 @@ plt.show()
 
 
 
-
+___________________________________________________________________________________________________
 
 
 
@@ -332,7 +332,7 @@ y_pred = mean_predictor.predict(X_test)
 
 
 
-
+___________________________________________________________________________________________________
 
 
 
@@ -345,3 +345,128 @@ demographics_file_location = base_path + 'data_demo.txt'
 events_file_location = base_path + 'data_events.txt'
 demographic_df = pd.read_csv(demographics_file_location, sep='\t',index_col="panelist_id")
 events_df = pd.read_csv(events_file_location, sep='\t', engine="python", on_bad_lines='skip')
+
+
+___________________________________________________________________________________________________
+
+
+
+parsing date
+
+
+https://strftime.org/
+
+
+
+Some examples:
+
+1/17/07 has the format "%m/%d/%y"
+17-1-2007 has the format "%d-%m-%Y"
+
+
+___________________________________________________________________________________________________
+# create a new column, date_parsed, with the parsed dates
+landslides['date_parsed'] = pd.to_datetime(landslides['date'], format = "%m/%d/%y")
+
+___________________________________________________________________________________________________
+
+One of the biggest dangers in parsing dates is mixing up the months and days. The to_datetime() function does have very helpful error messages, but it doesn't hurt to double-check that the days of the month we've extracted make sense
+
+# remove na's
+day_of_month_landslides = day_of_month_landslides.dropna()
+
+# plot the day of the month
+sns.distplot(day_of_month_landslides, kde=False, bins=31)
+
+___________________________________________________________________________________________________
+reading files with encoding problems
+
+# try to read in a file not in UTF-8
+kickstarter_2016 = pd.read_csv("../input/kickstarter-projects/ks-projects-201612.csv")
+# look at the first ten thousand bytes to guess the character encoding
+with open("../input/kickstarter-projects/ks-projects-201801.csv", 'rb') as rawdata:
+    result = chardet.detect(rawdata.read(10000))
+
+# check what the character encoding might be
+print(result)
+
+So chardet is 73% confidence that the right encoding is "Windows-1252". Let's see if that's correct:
+
+
+# read in the file with the encoding detected by chardet
+kickstarter_2016 = pd.read_csv("../input/kickstarter-projects/ks-projects-201612.csv", encoding='Windows-1252')
+
+# look at the first few lines
+kickstarter_2016.head()
+
+
+___________________________________________________________________________________________________
+
+INCONSISTENT DATA
+
+
+# get all the unique values in the 'City' column
+cities = suicide_attacks['City'].unique()
+
+# sort them alphabetically and then take a closer look
+cities.sort()
+cities
+
+
+Just looking at this, I can see some problems due to inconsistent data entry: 'Lahore' and 'Lahore ', for example, or 'Lakki Marwat' and 'Lakki marwat'.
+
+
+
+___________________________________________________________________________________________________
+# convert to lower case
+suicide_attacks['City'] = suicide_attacks['City'].str.lower()
+# remove trailing white spaces
+suicide_attacks['City'] = suicide_attacks['City'].str.strip()
+
+___________________________________________________________________________________________________
+
+It does look like there are some remaining inconsistencies: 'd. i khan' and 'd.i khan' should probably be the same.
+
+I'm going to use the fuzzywuzzy package to help identify which string are closest to each other.
+
+# get the top 10 closest matches to "d.i khan"
+matches = fuzzywuzzy.process.extract("d.i khan", cities, limit=10, scorer=fuzzywuzzy.fuzz.token_sort_ratio)
+
+# take a look at them
+matches
+
+___________________________________________________________________________________________________
+We can see that two of the items in the cities are very close to "d.i khan": "d. i khan" and "d.i khan". We can also see the "d.g khan", which is a seperate city, has a ratio of 88. Since we don't want to replace "d.g khan" with "d.i khan", let's replace all rows in our City column that have a ratio of > 90 with "d. i khan".
+
+# function to replace rows in the provided column of the provided dataframe
+# that match the provided string above the provided ratio with the provided string
+def replace_matches_in_column(df, column, string_to_match, min_ratio = 90):
+    # get a list of unique strings
+    strings = df[column].unique()
+    
+    # get the top 10 closest matches to our input string
+    matches = fuzzywuzzy.process.extract(string_to_match, strings, 
+                                         limit=10, scorer=fuzzywuzzy.fuzz.token_sort_ratio)
+
+    # only get matches with a ratio > 90
+    close_matches = [matches[0] for matches in matches if matches[1] >= min_ratio]
+
+    # get the rows of all the close matches in our dataframe
+    rows_with_matches = df[column].isin(close_matches)
+
+    # replace all rows with close matches with the input matches 
+    df.loc[rows_with_matches, column] = string_to_match
+    
+    # let us know the function's done
+    print("All done!")
+
+
+___________________________________________________________________________________________________
+# use the function we just wrote to replace close matches to "d.i khan" with "d.i khan"
+replace_matches_in_column(df=suicide_attacks, column='City', string_to_match="d.i khan")
+
+___________________________________________________________________________________________________
+
+
+
+
